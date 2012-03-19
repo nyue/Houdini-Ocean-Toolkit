@@ -1,0 +1,192 @@
+#    Hey emacs this is -*- python -*-.
+#
+#    Cross platform build environment for HOT
+#    Drew.Whitehouse@anu.edu.au
+#    Nov 2008
+#
+import os
+import sys
+import platform
+from subprocess import Popen,PIPE
+from tempfile import NamedTemporaryFile,gettempdir
+
+debug_build = False
+
+if ARGUMENTS.get("debug",'0') == '1':
+    debug_build = True
+    print "Building debug version"
+else:
+    debug_build = False
+    print "Building release version"
+
+def get_env_from_hcustom(debug=False):
+
+    #print "machine",platform.machine()
+    #print "system",platform.system()
+    #print "architecture",platform.architecture()
+
+    #
+    # First we run hcustom on a dummy file and strip the flags from the
+    # compile and link commands.
+    #
+
+    # write a temporary file to tempdir and run hcustom on it
+    tmpdir = os.getcwd()
+    dir = gettempdir()
+
+    try:
+        os.chdir(dir)
+        tmpfile = NamedTemporaryFile(suffix='.C')
+        tmpfile_src = os.path.basename(tmpfile.name)
+        tmpfile_name = os.path.splitext(os.path.basename(tmpfile.name))[0]
+        #print 'tmp_filename',tmpfile_src,tmpfile_name
+        tmpfile.write("void foo() {}\n")
+        tmpfile.flush()
+
+        if debug:
+            cmd = ["hcustom","-g","-i",dir,"-e",tmpfile_src]
+        else:
+            cmd = ["hcustom","-i",dir,"-e",tmpfile_src]
+
+        #print '********************************************\n%s\n**************************************************' % cmd
+        
+        output = Popen(cmd, stdout=PIPE).communicate()[0]
+        del tmpfile
+
+    finally:
+        os.chdir(tmpdir)
+
+    #print '********************************************\n%s\n**************************************************' % output
+    lines = output.split('\n')
+
+    # remove non compile and link lines
+    tmp = []
+    for l in lines:
+        if 'Install directory' in l:
+            continue
+        elif "Linking with" in l:
+            continue
+        elif "Making debug version" in l:
+            continue
+        elif l=="":
+            continue
+        else:
+            tmp.append(l)
+    lines=tmp    
+
+    # we should have two lines left - the first a compile, the other a link
+    #print '****lines',lines
+    assert len(lines) == 2
+    compile = lines[0].split()
+    link = lines[1].split()
+
+    # remove the source from the compile string
+
+    compile.remove(tmpfile_src)
+
+    #print 'C',compile
+    #print 'L',link
+
+    # remove the compiler and linker
+    del compile[0]
+    del link[0]
+
+
+    # find the name of the object file
+    if platform.system() == 'Linux':
+
+        # process the compile directives
+        index = compile.index('-o')
+        del compile[index:index+2]
+
+        # process the link directives
+        index = link.index('-o')
+        del link[index:index+2]
+        link.remove(tmpfile_name+'.o')
+        link.remove('-shared')
+
+    elif platform.system() == 'Darwin':
+
+        # process the compile directives
+        index = compile.index('-o')
+        del compile[index:index+2]
+
+        # process the compile directives
+        #index = compile.index('-arch')
+        #del compile[index:index+2]
+
+        # process the link directives
+        index = link.index('-o')
+        del link[index:index+2]
+        link.remove(tmpfile_name+'.o')
+        link.remove('-bundle')
+        # process the compile directives
+        #index = link.index('-arch')
+        #del link[index:index+2]
+
+    elif platform.system() == 'NT':
+        pass
+
+    else:
+        print "warning: unknown platform"
+        sys.exit(1)
+
+    #print 'C',compile
+    #print 'L',link
+
+    # we have to edit the tag definition due to a bug/feature in the
+    # env.ParseFlags method that is implicity called by env.MergeFlags
+    for i in range(len(compile)):  
+      if 'UT_DSO_TAGINFO' in compile[i]:
+            compile[i] = compile[i].replace('"',r'\"')
+            break
+
+    # now the compile and link string should only contain flags, we let
+    # scons parse them and put them into an Environment
+    env = Environment(SHLIBPREFIX='')
+    env.MergeFlags(" ".join(compile+link))
+    return env
+
+env = get_env_from_hcustom(debug_build)
+
+#print env.Dump()
+
+# add the 3rd party lib paths
+if platform.system() == "Linux":
+    env.Append(CPPPATH=["./3rdparty/include","./3rdparty/linux/include"],
+               LIBPATH=["./3rdparty/linux/lib"],
+               LIBS=['blitz','fftw3f'])
+elif platform.system() == "Darwin":
+    env.Append(CPPPATH=["./3rdparty/include","./3rdparty/osx/include"],
+               LIBPATH=["./3rdparty/osx/lib"],
+               LIBS=['blitz','fftw3f'])
+elif platform.machine() == "NT":
+    pass
+else:
+    print "error, unknown platform"
+    sys.exit(1)
+
+sop_ocean = env.SharedLibrary('SOP_Ocean',['SOP_Ocean.C'])
+vex_ocean = env.SharedLibrary('VEX_Ocean',['VEX_Ocean.C'])
+sop_cleave = env.SharedLibrary('SOP_Cleave',['SOP_Cleave.C'])
+
+# sop_ocean = env.LoadableModule('SOP_Ocean',['SOP_Ocean.C'])
+# vex_ocean = env.LoadableModule('VEX_Ocean',['VEX_Ocean.C'])
+# sop_cleave = env.LoadableModule('SOP_Cleave',['SOP_Cleave.C'])
+
+#
+# Installation
+#
+if platform.system() == "Darwin":
+    hih_dir = os.path.join(os.getenv("HOME"),
+                           "Library","Preferences","houdini",
+                           os.getenv("HOUDINI_MAJOR_RELEASE")+"."+os.getenv("HOUDINI_MINOR_RELEASE"))
+else:
+    hih_dir = os.getenv("HIH")
+
+dso_dir = os.path.join(hih_dir,"dso")
+
+env.Install(dso_dir,[sop_ocean,vex_ocean,sop_cleave])
+env.Alias('install',dso_dir)
+
+
