@@ -46,7 +46,7 @@
 #include <OP/OP_Operator.h>
 #include <OP/OP_OperatorTable.h>                                            
 #include <GU/GU_PrimPart.h>
-#include <GB/GB_AttributeRef.h>
+#include <GA/GA_AttributeRef.h>
 
 // --------------------------------- SOP paramaters --------------------------------------------
 
@@ -211,7 +211,7 @@ SOP_Ocean::oceanChanged(void * data, int,  float, const PRM_Template *)
 OP_ERROR
 SOP_Ocean::cookMySop(OP_Context &context)
 {
-    float now = context.myTime;
+    float now = context.getTime();
 
     //std::cout << "cook ocean, t = " << now << std::endl;
 
@@ -279,9 +279,9 @@ SOP_Ocean::cookMySop(OP_Context &context)
 
 
         // get our attribute indices
-        GB_AttributeRef normal_index;
-        GB_AttributeRef jminus_index;
-        GB_AttributeRef eminus_index;
+        GA_RWAttributeRef normal_index;
+        GA_RWAttributeRef jminus_index;
+        GA_RWAttributeRef eminus_index;
 
         if (do_normals)
         {
@@ -289,14 +289,16 @@ SOP_Ocean::cookMySop(OP_Context &context)
         }
         if (do_jacobian)
         {
-            jminus_index = gdp->addPointAttrib("mineigval",sizeof(float),GB_ATTRIB_FLOAT,0);
-            eminus_index = gdp->addPointAttrib("mineigvec",sizeof(UT_Vector3),GB_ATTRIB_VECTOR,0);
+            // jminus_index = gdp->addPointAttrib("mineigval",sizeof(float),GB_ATTRIB_FLOAT,0);
+            // eminus_index = gdp->addPointAttrib("mineigvec",sizeof(UT_Vector3),GB_ATTRIB_VECTOR,0);
+            jminus_index = gdp->addTuple(GA_STORE_REAL32,GA_ATTRIB_POINT,"mineigval",1,GA_Defaults(0));
+            eminus_index = gdp->addFloatTuple(GA_ATTRIB_POINT,"mineigvec",1,GA_Defaults(0));
         }
 
         // this is not that fast, can it be done quicker ???
-        FOR_ALL_GPOINTS(gdp, ppt)
+        GA_FOR_ALL_GPOINTS(gdp, ppt)
             {
-                UT_Vector4& p = ppt->getPos();
+                UT_Vector4 p = ppt->getPos();
 
                 
                 if (linterp)
@@ -316,25 +318,38 @@ SOP_Ocean::cookMySop(OP_Context &context)
                 }
                 else
                 {
-                    ppt->getPos()(1) += _ocean_context->disp[1];
+                    // ppt->getPos()(1) += _ocean_context->disp[1];
+                	UT_Vector4 tmp_p = ppt->getPos();
+                	tmp_p(1) += _ocean_context->disp[1];
+                	ppt->setPos(tmp_p);
                 }
 
                 if (do_normals)
                 {
-                  UT_Vector3* normal = (UT_Vector3*) ppt->castAttribData<UT_Vector3>(normal_index);
-                    normal->assign(_ocean_context->normal[0],
-                                   _ocean_context->normal[1],
-                                   _ocean_context->normal[2]);
-                    normal->normalize();
+                	/*
+					  UT_Vector3* normal = (UT_Vector3*) ppt->castAttribData<UT_Vector3>(normal_index);
+					  normal->assign(_ocean_context->normal[0],
+					                 _ocean_context->normal[1],
+					                 _ocean_context->normal[2]);
+					  normal->normalize();
+                    */
+                	ppt->getValue<UT_Vector3>(normal_index).assign(_ocean_context->normal[0],
+																   _ocean_context->normal[1],
+																   _ocean_context->normal[2]);
+                	ppt->getValue<UT_Vector3>(normal_index).normalize();
                 }
 
                 if (do_jacobian)
-                {
+                {/*
                     float *js = (float*)ppt->castAttribData<float>(jminus_index);
                     *js = _ocean_context->Jminus;
                     UT_Vector3* eminus = (UT_Vector3*)ppt->castAttribData<UT_Vector3>(eminus_index);
                     eminus->assign(_ocean_context->Eminus[0],0,_ocean_context->Eminus[1]);
+                    */
+                    ppt->setValue<float>(jminus_index,_ocean_context->Jminus);
+                    ppt->getValue<UT_Vector3>(eminus_index).assign(_ocean_context->Eminus[0],0,_ocean_context->Eminus[1]);
                 }
+				ppt->setPos(p);
             }
 
 

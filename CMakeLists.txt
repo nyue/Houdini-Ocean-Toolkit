@@ -8,11 +8,11 @@ project(hot)
 # run our helper process to grab the compile and link flags from hcustom
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMakeModules" )
-execute_process(COMMAND hdk-config.py --notag --cmake=${PROJECT_SOURCE_DIR}/CMakeModules/FindHDK.cmake)
+# execute_process(COMMAND hdk-config.py --notag --cmake=${PROJECT_SOURCE_DIR}/CMakeModules/FindHDK.cmake)
 
 find_package(HDK)
 
-set(CMAKE_INSTALL_PREFIX ${HDK_HIH_DIR})
+set(CMAKE_INSTALL_PREFIX $ENV{HIH})
 
 # the 3rdparty libraries that I use can usually be found here ...
 #set (CMAKE_FIND_ROOT_PATH  ${PROJECT_SOURCE_DIR}/../3rdparty)
