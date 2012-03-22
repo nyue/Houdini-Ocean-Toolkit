@@ -56,7 +56,36 @@ IF ( $ENV{HT} MATCHES "toolkit" )
 	
   ENDIF (WIN32)
   
+  FUNCTION(GenerateSESITagSourceFile filename)
+    EXECUTE_PROCESS ( COMMAND date OUTPUT_VARIABLE DATE )
+    EXECUTE_PROCESS ( COMMAND hostname OUTPUT_VARIABLE HOSTNAME )
+    SET ( SESITAG_STR "compiled on: " ${DATE} "         by: " $ENV{LOGNAME} "@" ${HOSTNAME} )
+	FILE ( WRITE ${CMAKE_BINARY_DIR}/tmp_sesitag.C ${SESITAG_STR} )
+	FILE ( WRITE ${CMAKE_BINARY_DIR}/sesitag.sh "#!/bin/sh\nsesitag -m < tmp_sesitag.C")
+	EXECUTE_PROCESS ( COMMAND sh ${CMAKE_BINARY_DIR}/sesitag.sh OUTPUT_VARIABLE SESITAG_OUTPUT )
+	MESSAGE ( "SESITAG_OUTPUT = " ${SESITAG_OUTPUT} )
+
+	STRING ( REPLACE "-DUT_DSO_TAGINFO='\"" "" TEMP_UT_DSO_TAGINFO ${SESITAG_OUTPUT})
+	MESSAGE ( "TEMP_UT_DSO_TAGINFO = " ${TEMP_UT_DSO_TAGINFO} )
+	STRING ( REPLACE "\"'" "" UT_DSO_TAGINFO ${TEMP_UT_DSO_TAGINFO})
+	MESSAGE ( "UT_DSO_TAGINFO = " ${UT_DSO_TAGINFO} )
+
+
+    FILE ( WRITE ${filename} "//\n")
+    FILE ( APPEND ${filename} "// Warning: do not edit, this file was written automatically by FindHDK.cmake.\n")
+    FILE ( APPEND ${filename} "//\n")
+#    FILE ( APPEND ${filename} "#ifdef __UT_DSOVersion__\n")
+#    FILE ( APPEND ${filename} "#undef  __UT_DSOVersion__\n")
+#    FILE ( APPEND ${filename} "#endif\n")
+    FILE ( APPEND ${filename} "#define UT_DSO_TAGINFO \"" ${UT_DSO_TAGINFO} "\"\n")
+    FILE ( APPEND ${filename} "#include <UT/UT_DSOVersion.h>\n")
+
+
+
+
+  ENDFUNCTION()
   
   SET ( HDK_FOUND TRUE )
+  SET ( HDK_HIH_DIR $ENV{HIH})
   
 ENDIF ()

@@ -29,7 +29,7 @@
  at http://www.gnu.org/copyleft/gpl.html
 */
 
-#include <UT/UT_DSOVersion.h>
+// #include <UT/UT_DSOVersion.h>
 #include <UT/UT_Math.h>
 #include <UT/UT_Matrix3.h>
 #include <UT/UT_Matrix4.h>

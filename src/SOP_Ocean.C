@@ -32,7 +32,7 @@
 
 #include "SOP_Ocean.h"
 
-#include <UT/UT_DSOVersion.h>
+// #include <UT/UT_DSOVersion.h>
 #include <CMD/CMD_Manager.h>
 #include <CMD/CMD_Args.h>
 #include <VEX/VEX_VexOp.h>
