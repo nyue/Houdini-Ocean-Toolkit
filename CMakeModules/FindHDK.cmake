@@ -15,6 +15,10 @@ IF ( $ENV{HT} MATCHES "toolkit" )
 
   STRING ( STRIP ${TEMP_LINK_FLAGS}  HDK_LINK_FLAGS )
 
+  ADD_DEFINITIONS (
+	-DMAKING_DSO
+	)
+
   IF (WIN32)
 	
 	# Release flags
@@ -33,12 +37,11 @@ IF ( $ENV{HT} MATCHES "toolkit" )
 	FILE ( GLOB DSOLIB_A $ENV{HFS}/custom/houdini/dsolib/*.a )
 	FILE ( GLOB DSOLIB_LIB $ENV{HFS}/custom/houdini/dsolib/*.lib )
 	LINK_DIRECTORIES ($ENV{HFS}/custom/houdini/dsolib )
-	
+	MESSAGE ( "DSOLIB_A = " ${DSOLIB_A})
+	MESSAGE ( "DSOLIB_LIB = " ${DSOLIB_LIB})
+    SET ( HDK_LIBRARIES ${DSOLIB_LIB} ${DSOLIB_A} )
   ELSE (WIN32)
 
-	ADD_DEFINITIONS (
-	  -DMAKING_DSO
-	  )
 	# Release flags
 	STRING ( REGEX REPLACE "-DVERSION=..[0-9]+.[0-9]+.[0-9]+.. " "" HDK_DEFINITIONS "${TEMP_DEFINITIONS}")
 	
@@ -87,5 +90,5 @@ IF ( $ENV{HT} MATCHES "toolkit" )
   
   SET ( HDK_FOUND TRUE )
   SET ( HDK_HIH_DIR $ENV{HIH})
-  
+  MESSAGE ( "HDK_HIH_DIR = " ${HDK_HIH_DIR} )
 ENDIF ()

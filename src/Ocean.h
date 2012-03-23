@@ -71,7 +71,9 @@
 #include <loki/Threads.h>
 
 // we use blitz for n-dimensional arrays (http://www.oonumerics.org/blitz/)
+#ifndef WIN32
 #define BZ_THREADSAFE
+#endif // WIN32
 #include <blitz/array.h>
 
 // OpenEXR includes a nice reentrant gaussian random number generator (http://www.openexr.com/)

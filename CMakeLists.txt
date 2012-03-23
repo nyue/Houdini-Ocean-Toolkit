@@ -3,6 +3,10 @@
 # 
 cmake_minimum_required(VERSION 2.6)
 
+if (WIN32)
+  cmake_policy(SET CMP0008 NEW)
+endif (WIN32)
+
 project(hot)
 
 # run our helper process to grab the compile and link flags from hcustom
@@ -14,7 +18,7 @@ find_package(HDK)
 
 if (HDK_FOUND)
 
-  set(CMAKE_INSTALL_PREFIX ${HDK_HIH_DIR})
+  # set(CMAKE_INSTALL_PREFIX ${HDK_HIH_DIR})
   
   # the 3rdparty libraries that I use can usually be found here ...
   #set (CMAKE_FIND_ROOT_PATH  ${PROJECT_SOURCE_DIR}/../3rdparty)
